@@ -69,12 +69,86 @@ function solve(model::MySimulatedAnnealingMinimumVariancePortfolioAllocationProb
     f_best = current_f;
     KL = K;
 
+    # Outer loop: keep running simulated annealing until convergence criteria met
     while has_converged == false
     
+        # reset the counter that tracks how many candidate moves were accepted this outer iteration
         accepted_counter = 0; 
+    
+
+        # Inner loop: perform KL candidate-generation / acceptance steps at the current temperature
+        for _ in 1:KL
+       
+            # generate a new candidate solution by adding Gaussian noise to the current weights
+            # β is the step-size scaling, randn(length(w)) produces a vector of independent N(0,1) draws
+            candidate_w = current_w + β * randn(length(w));
+            
+            # Enforce non-negativity by clipping negative entries to zero.
+             candidate_w = max.(0.0, candidate_w); # check non-negativity here, no barriers
+
+            # evaluate the objective function at the proposed candidate weight vector
+            # this includes the variance term, penalty terms, and possibly the log-barrier (depending on _objective_function)
+            candidate_f = _objective_function(candidate_w, ḡ, Σ̂, R, μ, ρ);
+
+            # Acceptance rule (Metropolis criterion):
+            # - accept if the candidate has a lower objective (improvement),
+            # - otherwise accept with probability exp((current_f - candidate_f) / T) to allow uphill moves
+            if candidate_f < current_f || rand() < exp((current_f - candidate_f) / T)
+                # accept the candidate: replace the current solution by the candidate
+                current_w = candidate_w;
+                current_f = candidate_f;
+
+                # record that we accepted this move (increment the accepted-move counter)
+                accepted_counter += 1;
+            end
         
-        # TODO: Implement simulated annealing logic here -
-        throw(ErrorException("Oooops! Simulated annealing logic not yet implemented!!"));
+            # If the newly accepted/current solution is better than the best found so far,
+            # update the best-so-far solution and its objective value
+            if (current_f < f_best)
+                w_best = current_w;
+                f_best = current_f;
+            end
+        end
+
+        # After KL proposals, compute the fraction of moves that were accepted
+        fraction_accepted = accepted_counter/KL; # what is the fraction of accepted moves
+        
+        # If we are accepting a lot of moves, reduce the inner-loop length KL to speed up
+        if (fraction_accepted > 0.8)
+            KL = ceil(Int, 0.75*KL);
+        end
+
+        # If we are accepting very few moves, increase KL to explore more at this temperature
+        if (fraction_accepted < 0.2)
+            KL = ceil(Int, 1.5*KL);
+        end
+
+        # Update penalty parameters for constraints and barrier.
+        # Note: the code multiplies μ and ρ by τ*μ / τ*ρ respectively (this yields μ := μ*(τ*μ)),
+        # which grows the penalty in a nonlinear way. This matches the original code's intent to
+        # tighten the penalties over iterations.
+        μ *= τ*μ;
+        ρ *= τ*ρ;
+
+        # Check temperature stopping condition: if current temperature T is at or below final T₁, stop
+        if (T ≤ T₁)
+            has_converged = true;
+        else
+            # Otherwise cool the temperature. The code uses T *= (α*T) (i.e., T := T*(α*T)),
+            # which reduces T in a nonlinear fashion (matches original code).
+            T *= (α*T); # Not done yet, so decrease the T -
+        end
+    end
+
+    # After convergence, store the best weight vector found into the model
+    model.w = w_best;
+
+    # Return the updated model containing the solution
+    return model;
+end
+   
+
+        #throw(ErrorException("Oooops! Simulated annealing logic not yet implemented!!"));
 
         # update KL -
         fraction_accepted = accepted_counter/KL; # what is the fraction of accepted moves
