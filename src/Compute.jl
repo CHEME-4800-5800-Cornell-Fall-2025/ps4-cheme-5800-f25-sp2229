@@ -172,14 +172,14 @@ end
         else
             T *= (α*T); # Not done yet, so decrease the T -
         end
-    end
+
 
     # update the model with the optimal weights -
     model.w = w_best;
 
     # return the model -
     return model;
-end
+
 
 """
     function solve(problem::MyMarkowitzRiskyAssetOnlyPortfolioChoiceProblem) -> Dict{String,Any}
