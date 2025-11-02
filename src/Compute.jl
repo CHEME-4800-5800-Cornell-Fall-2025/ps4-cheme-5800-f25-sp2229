@@ -14,7 +14,7 @@ function _objective_function(w::Array{Float64,1}, ḡ::Array{Float64,1},
     f = w'*(Σ̂*w) + (1/(2*ρ))*((sum(w) - 1.0)^2 + (transpose(ḡ)*w - R)^2) - (1/μ)*sum(_safe_log.(w));
 
     # TODO: This version of the objective function does NOT have the barrier term
-    # f = w'*(Σ̂*w) + (1/(2*ρ))*((sum(w) - 1.0)^2 + (transpose(ḡ)*w - R)^2);
+   # f = w'*(Σ̂*w) + (1/(2*ρ))*((sum(w) - 1.0)^2 + (transpose(ḡ)*w - R)^2);
 
 
     return f;
